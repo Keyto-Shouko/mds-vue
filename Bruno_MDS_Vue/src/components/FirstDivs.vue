@@ -5,7 +5,7 @@ defineProps<{
 </script>
 
 <script lang="ts">
-import mapboxgl from "mapbox-gl";
+import mapboxgl, { type LngLatLike } from "mapbox-gl";
 export default {
   data() {
     return {
@@ -24,7 +24,7 @@ export default {
           lastname: "Bernard",
           age: "25",
           phoneNumber: "0606060606",
-          address: "Rue",
+          address: "25 Rue du Maréchal Leclerc 74000 Annecy",
           sexe: "Male",
         },
         {
@@ -32,7 +32,7 @@ export default {
           lastname: "Blachère",
           age: "29",
           phoneNumber: "0606060606",
-          address: "Rue",
+          address: "4 Rue du Levant 74000 Annecy",
           sexe: "Female",
         },
         {
@@ -40,7 +40,7 @@ export default {
           lastname: "Bernard",
           age: "20",
           phoneNumber: "0606060606",
-          address: "Rue",
+          address: "17 rue Jean Jaures 74000 Annecy",
           sexe: "Male",
         },
         {
@@ -48,7 +48,7 @@ export default {
           lastname: "Pogba",
           age: "17",
           phoneNumber: "0606060606",
-          address: "Rue",
+          address: "31 Avenue de Loverchy 74000 Annecy",
           sexe: "Star",
         },
       ],
@@ -76,10 +76,29 @@ export default {
         phoneNumber: submitEvent.target.elements.phoneNumber.value,
         sexe: submitEvent.target.elements.sexe.value,
       });
-      this.latLong =
-        "https://api.mapbox.com/geocoding/v5/{endpoint}/{" +
-        submitEvent.target.elements.addresse.value +
-        "}.json";
+      mapboxgl.accessToken = this.accessToken;
+      const mapboxClient = mapboxSdk({ accessToken: mapboxgl.accessToken });
+      mapboxClient.geocoding
+      .forwardGeocode({
+        query: submitEvent.target.elements.addresse.value,
+        autocomplete: false,
+        limit: 1
+      })
+      .send()
+      .then((response) => {
+        if (
+          !response ||
+          !response.body ||
+          !response.body.features ||
+          !response.body.features.length
+        ) {
+          console.error('Invalid response:');
+          console.error(response);
+          return;
+        }
+        const feature = response.body.features[0];
+        new mapboxgl.Marker({ color: 'red', rotation: 50 }).setLngLat(feature.center).addTo(this.map);
+      });
     },
     deleteUser(indexOfFamilyMember: number) {
       this.family.splice(indexOfFamilyMember, 1);
@@ -87,7 +106,35 @@ export default {
     toggleVisibleButton() {
       this.buttonVisible = !this.buttonVisible;
     },
-  },
+
+    loopThroughMemberAndAddMarkers(){
+        Object.keys(this.family).forEach((key) => {
+                let member = this.family[key];
+                const mapboxClient = mapboxSdk({ accessToken: mapboxgl.accessToken });
+                mapboxClient.geocoding
+                    .forwardGeocode({
+                        query: member.address,
+                        autocomplete: false,
+                        limit: 1
+                    })
+                    .send()
+                    .then((response) => {
+                        if (
+                            !response ||
+                            !response.body ||
+                            !response.body.features ||
+                            !response.body.features.length
+                        ) {
+                            console.error('Invalid response:');
+                            console.error(response);
+                            return;
+                        }
+                        const feature = response.body.features[0];
+                        new mapboxgl.Marker({ color: 'Yellow', rotation: 25 }).setLngLat(feature.center).addTo(this.map);
+                    });
+            });
+        },
+},
   mounted() {
     setInterval(this.increaseAgeAndyear, 3000);
     this.orderedUsers, (mapboxgl.accessToken = this.accessToken);
@@ -110,6 +157,7 @@ export default {
             let centro = this.map.getCenter();
             marker.setLngLat(centro);
         });*/
+        this.loopThroughMemberAndAddMarkers();
   },
   computed: {
     orderedUsers: function () {
